@@ -1,1 +1,1 @@
-# sc_RNAseq
+# various functions for ngs analysis
