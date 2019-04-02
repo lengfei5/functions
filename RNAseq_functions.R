@@ -1,6 +1,54 @@
 ############# 
 ##### Collection of functions for RNA-seq data
-############# 
+#############
+cat.countTable = function(xlist, countsfrom = 'featureCounts')
+{
+  ## input is list.files for count tables (including directories and file names)
+  counts = NULL
+  for(n in 1:length(xlist)){
+    # n = 1
+    cat(xlist[n], '--\n')
+    if(countsfrom == 'featureCounts') {
+      ff = read.delim(xlist[n], sep='\t', header = TRUE, as.is = c(1), comment.char = "#");
+      ff = ff[, c(1, ncol(ff))]
+    }else{
+      cat('no code for this option \n')
+    }
+    
+    if(n==1){
+      ggs = unique(ff[, 1]);
+      counts = data.frame(ggs, ff[match(ggs, ff[, 1]) , -1], stringsAsFactors = FALSE);
+    }else{
+      ggs = unique(c(counts[, 1], ff[, 1]));
+      counts = data.frame(ggs, counts[match(ggs, counts[, 1]), -1], ff[match(ggs, ff[, 1]) , -1], stringsAsFactors = FALSE);
+    }
+  }
+  
+  colnames(counts)[1] = 'gene'
+  colnames(counts)[-1] = basename(xlist)
+  return(counts)
+  
+}
+
+process.countTable = function(all, design)
+{
+  index = c()
+  for(n in 1:nrow(design))
+  {
+    #n = 1;
+    jj = intersect(grep(design$SampleID[n], colnames(all)), grep("Total.count", colnames(all)));
+    if(length(jj)==1) {
+      index = c(index,jj)
+    }else{print(paste0("ERROR for sample--", design$SampleID[n]))}
+  }
+  
+  newall = data.frame(as.character(all[,1]),  as.matrix(all[, index]), stringsAsFactors = FALSE)
+  colnames(newall)[1] = "gene";
+  colnames(newall)[-1] = paste0(design$genotype, "_", design$tissue.cell, "_", design$SampleID)
+  
+  return(newall)
+}
+
 Check.RNAseq.Quality = function(read.count, design.matrix, keep.All = FALSE, norms=NULL, Threshold.read.counts=10)
 {
   require(lattice);
