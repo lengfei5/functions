@@ -1,1 +1,1 @@
-# various functions for ngs analysis
+# Functions for ngs analysis
