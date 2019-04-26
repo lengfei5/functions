@@ -1,5 +1,5 @@
 ############# 
-##### Collection of functions for RNA-seq data
+# cat tables 
 #############
 cat.countTable = function(xlist, countsfrom = 'featureCounts')
 {
@@ -30,27 +30,54 @@ cat.countTable = function(xlist, countsfrom = 'featureCounts')
   
 }
 
-process.countTable = function(all, design)
+process.countTable = function(all, design, special.column = NULL, ensToGeneSymbol = FALSE, mergeCounts.forSameGeneSysbols = TRUE)
 {
   index = c()
   for(n in 1:nrow(design))
   {
     #n = 1;
-    jj = intersect(grep(design$SampleID[n], colnames(all)), grep("Total.count", colnames(all)));
+    jj = grep(design$SampleID[n], colnames(all))
+    if(!is.null(special.column))  jj = intersect(jj, grep(special.column, colnames(all)));
+   
     if(length(jj)==1) {
       index = c(index,jj)
     }else{print(paste0("ERROR for sample--", design$SampleID[n]))}
   }
   
   newall = data.frame(as.character(all[,1]),  as.matrix(all[, index]), stringsAsFactors = FALSE)
-  colnames(newall)[1] = "gene";
-  colnames(newall)[-1] = paste0(design$genotype, "_", design$tissue.cell, "_", design$SampleID)
+  colnames(newall)[1] = "gene"
+  kk = which(colnames(design)=='SampleID')
+  kk = c(setdiff(c(1:ncol(design)), kk), kk)
+  colnames(newall)[-1] = apply(design[, kk], 1, function(x)  paste(x, collapse = "_"))
+  #paste(design$gen, "_", design$tissue.cell, "_", design$SampleID)
+  
+  if(ensToGeneSymbol){
+    options(warn=2)
+    result <- try(load(file='/Volumes/groups/cochella/jiwang/annotations/BioMart_WBcel235.Rdata'), silent=TRUE)
+    if (class(result) == "try-error"){
+      load(file='/Volumes/groups-1/cochella/jiwang/annotations/BioMart_WBcel235.Rdata')
+    }else{
+      load(file='/Volumes/groups/cochella/jiwang/annotations/BioMart_WBcel235.Rdata')
+    }
+    options(warn = -1)
+    mm = match(newall$gene, annot$WormBase.Gene.ID)
+    newall$gene = as.character(annot$Gene.name[mm])
+    
+    ss = apply(as.matrix(newall[, -1]), 1, sum)
+    newall = newall[which(ss>0), ]
+    
+  }
   
   return(newall)
 }
 
+##########################################
+# check RNA seq quality 
+##########################################
 Check.RNAseq.Quality = function(read.count, design.matrix, keep.All = FALSE, norms=NULL, Threshold.read.counts=10)
 {
+  # read.count=all[, -1]; design.matrix = rep(1, nrow(design))
+  
   require(lattice);
   require(ggplot2)
   require('DESeq2');
@@ -59,18 +86,34 @@ Check.RNAseq.Quality = function(read.count, design.matrix, keep.All = FALSE, nor
   library("RColorBrewer");
   library("dplyr"); 
   library("ggplot2")
-  #load(file=paste0('Rdata/Screen_countData_sgRNA_Gene_clean_mapping', version.data, '.Rdata'))
-  # kk = grep('Ab', colnames(bb))
-  if(ncol(design.matrix)>2){cc = apply(design.matrix[, -1], 1, paste0, collapse="_")
-  }else{cc = design.matrix[, -1]}
-  #o1 = order(cc)
-  #read.count = read.count[o1,]
-  #cc = cc[o1]
+  
+  design.matrix = data.frame(design.matrix)
   raw = as.matrix(read.count)
-  #xx = raw
-  dim(raw)
+  #dim(raw)
   raw[which(is.na(raw))] = 0
-  xx = raw;
+  #xx = raw;
+  
+  if(ncol(design.matrix)==1) {
+    colnames(design.matrix) = "conds";
+    if(length(unique(design.matrix$conds))==1) {
+      
+      dds = DESeqDataSetFromMatrix(raw, DataFrame(design.matrix), design = ~ 1)
+    }else{
+      dds = DESeqDataSetFromMatrix(raw, DataFrame(design.matrix), design = ~ conds)
+    }
+    
+    conditions = design.matrix$conds; 
+  }else{
+    conds = factor(paste0(colnames(design.matrix), collapse = " + "))
+    #newO = order(design.matrix$conds)
+    #design.matrix = design.matrix[newO, ]
+    #counts = counts[, newO]
+    
+    conditions = apply(design.matrix, 1, function(x) {paste0(x, collapse = "_")})
+    eval(parse(text = paste0("dds <- DESeqDataSetFromMatrix(raw, DataFrame(design.matrix), design = ~ ", conds, ")")))
+  }
+  cc.uniq = unique(conditions)
+  cols = match(conditions, cc.uniq)
   
   par(cex = 1.8, las = 1, mgp = c(1.6,0.5,0), mar = c(6,16,2,0.8)+0.1, tcl = -0.3)
   par(mfrow=c(1,1))
@@ -86,12 +129,6 @@ Check.RNAseq.Quality = function(read.count, design.matrix, keep.All = FALSE, nor
   
   par(cex = 1.0, las = 1, mgp = c(2,0.2,0), mar = c(16,3,2,0.2), tcl = -0.3)
   boxplot(log10(xx), las=3, col=cols, ylab='log10(nb of reads)', main='Read distribution for features')
-  
-  ### make DESeq object using read counts and design matrix
-  countData = ceiling(raw)
-  conds = factor(paste0(colnames(design.matrix)[-1], collapse = " + "))
-  eval(parse(text = paste0("dds <- DESeqDataSetFromMatrix(countData, DataFrame(design.matrix), design = ~ ", conds, ")")))
-  #dds <- DESeqDataSetFromMatrix(countData, DataFrame(design.matrix), design = ~ condition + time)
   
   if(!keep.All){
     dds <- dds[ rowSums(counts(dds)) > Threshold.read.counts, ]
@@ -170,8 +207,12 @@ Check.RNAseq.Quality = function(read.count, design.matrix, keep.All = FALSE, nor
            col = colors)
   
   ### clustering samples using PCA analysis
-  pca=plotPCA(vsd, intgroup = colnames(design.matrix)[-1], returnData = FALSE)
-  print(pca)
+  if(ncol(design.matrix)>1){
+    pca=plotPCA(vsd, intgroup = c(colnames(design.matrix)), returnData=FALSE)
+  }else{
+    pca=plotPCA(vsd, intgroup = c('conds'), returnData=FALSE)
+  }
+  plot(pca);
   
   Show.sample.names.PCA.Clusters = FALSE 
   if(Show.sample.names.PCA.Clusters){
