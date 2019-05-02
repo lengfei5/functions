@@ -1,35 +1,46 @@
 #### Functions
-process.countTable = function(all, design, select.Total.count = TRUE, time.series = FALSE)
+process.countTable = function(all, design, select.counts = NULL)
 {
-  newall = data.frame(as.character(all[,1]), stringsAsFactors = FALSE)
+  newall = data.frame(as.character(all[, 1]), stringsAsFactors = FALSE)
   
   for(n in 1:nrow(design))
   {
     #n = 1;
     ## found the matching ID in design matrix
-    if(select.Total.count){
-      jj = intersect(grep(design$SampleID[n], colnames(all)), grep("Total.count", colnames(all)));
+    if(!is.null(select.counts)){
+      jj = intersect(grep(design$SampleID[n], colnames(all)), grep(select.counts, colnames(all)));
     }else{
       jj = grep(design$SampleID[n], colnames(all));
     }
     
-    ## deal with several mapping 
-    if(length(jj)==1) {
-      #index = c(index,jj)
-      newall = data.frame(newall, all[, jj])
+    ## deal with several mapping or zero mapping
+    if(length(jj) == 0){
+      cat("no count column found for ", design$SampleID[n], "\n")
     }else{
-      cat(length(jj), " samples found for ID", design$SampleID[n], "\n")
-      cat("start to merge those samples considering them as technical replicates...\n")
-      newall = data.frame(newall, apply(as.matrix(all[, jj]), 1, sum))
+      if(length(jj)==1) {
+        #index = c(index,jj)
+        cat("*** 1 count column found for ", design$SampleID[n], ":", colnames(all)[jj], "\n")
+        newall = data.frame(newall, all[, jj])
+      }else{
+        cat(length(jj), " samples found for ID", design$SampleID[n], ": ",  colnames(all)[jj], " -- ")
+        cat("Merge those columns as technical replicates...\n")
+        newall = data.frame(newall, apply(as.matrix(all[, jj]), 1, sum))
+      }
     }
   }
   
   colnames(newall)[1] = "gene";
-  if(time.series){
-    colnames(newall)[-1] = paste0(design$stage, "_", design$treatment, "_", design$SampleID)
-  }else{
-    colnames(newall)[-1] = paste0(design$genotype, "_", design$tissue.cell, "_", design$treatment, "_",  design$SampleID)
-  }
+  colnames(newall)[-1] = apply(design, 1, function(x) paste0(x, collapse = "_"))
+  
+  names = colnames(newall)
+  names = sapply(names, function(x) gsub('-', '.', x))
+  names = sapply(names, function(x) gsub(' ', '', x))
+  colnames(newall) = names
+  # if(time.series){
+  #   colnames(newall)[-1] = paste0(design$stage, "_", design$treatment, "_", design$SampleID)
+  # }else{
+  #   colnames(newall)[-1] = paste0(design$genotype, "_", design$tissue.cell, "_", design$treatment, "_",  design$SampleID)
+  # }
   
   return(newall)
 }
@@ -72,6 +83,34 @@ cat.countTable = function(xlist)
   colnames(counts)[1] = 'gene'
   return(counts)
   
+}
+
+compare.readCounts.umiFr.umiNum =function(design, aa, spikes){
+  
+  for(n in 1:nrow(design)){
+    id = design$SampleID[n]
+    par(mfrow=c(1,2))
+    plot(aa[, intersect(grep(id, colnames(aa)), grep("Total.count", colnames(aa)))], 
+         aa[, intersect(grep(id, colnames(aa)), grep("Total.UMIfr.count", colnames(aa)))], 
+         log='xy', main= paste0(design[n, ], collapse = "_"), xlab = 'read counts', ylab =' umi.frations',
+         cex = 0.4
+         )
+    points(spikes[, c(grep(paste0("Total.spikeIn.", id), colnames(spikes)), 
+                      grep(paste0("Total.UMI.spikeIn.", id), colnames(spikes)))], col = 'darkblue', cex = 1.5, pch=16)
+    abline(0, 1, lwd=1.2, col = 'red')
+    
+    plot(aa[, intersect(grep(id, colnames(aa)), grep("Total.count", colnames(aa)))], 
+         aa[, intersect(grep(id, colnames(aa)), grep("Total.UMInum.count", colnames(aa)))], 
+         log='xy', main= paste0(design[n, ], collapse = "_"), xlab = 'read counts', ylab =' umi.frations',
+         cex = 0.4
+    )
+    points(spikes[, c(grep(paste0("Total.spikeIn.", id), colnames(spikes)), 
+                      grep(paste0("Total.UMI.spikeIn.", id), colnames(spikes)))], col = 'darkblue', cex = 1.5, pch=16)
+    abline(0, 1, lwd=1.2, col = 'red')
+    
+  }
+  
+
 }
 
 
