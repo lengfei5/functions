@@ -1699,6 +1699,101 @@ find.non.enriched.miRNAs = function(neurons, enrich.matrix, fc.cutoff = 0, pval.
   return(ggs)
 }
 
+merge.interactionDiff = function(res1, res2){
+  ## merge both res1 and res2
+  res1 = as.data.frame(res1); 
+  res2 = as.data.frame(res2);
+  
+  ## change the sign (log2(WT.treated) - log2(WT.untreated)) - (log2(N2.treated) - log2(N2.untreated))
+  # res2$log2FoldChange = -res2$log2FoldChange; 
+  ii.enrich = which(res1$log2FoldChange>0) 
+  res1[ii.enrich, ] = res2[ii.enrich, ] ## replaced by res2 if enriched; keep if depleted
+  
+  ## merge the table with comparison with N2 and the one without
+  #colnames(res1) = paste0(colnames(res1), ".without.N2")
+  #colnames(res2) = paste0(colnames(res2), ".with.N2")
+  res = data.frame(res1, stringsAsFactors = FALSE)
+  colnames(res) = paste0(colnames(res), ".with.N2")
+  
+  return(res)
+  
+}
+
+enrichmentAnalysis.for.mutant.Norm.piRNA = function(countData, design.matrix = design, sfs=NULL)
+{
+  require(DESeq2)
+  # countData = raw[, sels]; design.matrix = design[sels, ]; sfs = sizefactors[sels];
+  dds <- DESeqDataSetFromMatrix(countData, DataFrame(design.matrix), design = ~ genotype + treatment + genotype:treatment)
+  sizeFactors(dds) = sfs/median(sfs)
+  dds$genotype <- relevel(dds$genotype, ref="N2") ## reference is N2 and untreated
+  dds$treatment = relevel(dds$treatment, ref="untreated")
+  
+  
+  dds = estimateDispersions(dds, fitType = "parametric")
+  par(cex = 1.0, las = 1, mgp = c(2,0.2,0), mar = c(3,2,2,0.2), tcl = -0.3)
+  plotDispEsts(dds, ylim=c(0.001, 10), cex=1.0)
+  
+  cpm = fpm(dds, robust = TRUE)
+  
+  dds = nbinomWaldTest(dds, betaPrior = FALSE)
+  resultsNames(dds)
+  
+  ##########################################
+  # find enriched miRNAs for WT: 
+  # Here we use N2 and untreated condition as reference 
+  ##########################################
+  ## the condition effect for genotype WT
+  #res1 = results(dds, contrast=list( c("treatment_treated_vs_untreated", "genotypeWT.treatmenttreated")))
+  ## test if condition effect in WT is greater than N2
+  ## i.e. test the significance log2(WT.treated/WT.untreated) - log2(N2.treated/N2.untreated)
+  ## https://support.bioconductor.org/p/60543/ (one of good explanation for this)
+  keep1 = results(dds, name = "genotypeWT.treatmenttreated", lfcThreshold = 0, altHypothesis = "greater" )
+  
+  #keep1 = merge.interactionDiff(res1, res2)
+  colnames(keep1) = paste0("WT.", colnames(keep1))
+  #res1 = results(dds, contrast=c("treatment","treated","untreated"))
+  #summary(res)
+  #plot(res$log2FoldChange, -log10(as.numeric(res$pvalue)), xlab='log2(FoldChange)', ylab='-log10(pvalue)', cex=0.8, 
+  #     main=paste0("WT --", " (NOT using N2)"))
+  #abline(v=0, lwd=2.0, col='black')
+  #abline(h=c(5, 10), lwd=1.0, lty=2, col='blue')
+  #text(res$log2FoldChange, -log10(res$pvalue), rownames(res), cex=0.7, offset = 0.3, pos = 3)
+  
+  #res1 = res
+  #res2 = results(dds, name = "genotypeN2.treatmenttreated", lfcThreshold = 0, altHypothesis = "less")
+ 
+  ##########################################
+  # find enriched miRNAs for WT_tax4_mutant_ks28
+  ##########################################
+  #res1 = results(dds, contrast=list( c("treatment_treated_vs_untreated", "genotypeWT_tax4_mutant_ks28.treatmenttreated")))
+  keep2 = results(dds, name = "genotypeWT_tax4_mutant_ks28.treatmenttreated", lfcThreshold = 0, altHypothesis = "greater" )
+  #keep2 = merge.interactionDiff(res1, res2)
+  colnames(keep2) = paste0("tax4_mutant_ks28.", colnames(keep2))
+  ##########################################
+  # find enriched miRNAs for WT_tax4_mutant_p678
+  ##########################################
+  #res1 = results(dds, contrast=list( c("treatment_treated_vs_untreated", "genotypeWT_tax4_mutant_p678.treatmenttreated")))
+  keep3 = results(dds, name = "genotypeWT_tax4_mutant_p678.treatmenttreated", lfcThreshold = 0, altHypothesis = "greater" )
+  #keep3 = merge.interactionDiff(res1, res2)
+  colnames(keep3) = paste0("tax4_mutant_p678.", colnames(keep3))
+  
+  ##########################################
+  # test if condition effect is different in WT_tax4_mutant_ks28 compare to WT
+  # and if condition effect is different in WT_tax4_mutant_p678 compare to WT
+  ##########################################
+  keep4 = as.data.frame(results(dds, contrast = list("genotypeWT_tax4_mutant_ks28.treatmenttreated", "genotypeWT.treatmenttreated")))
+  colnames(keep4) = paste0("tax4_mutant_ks28_vs_WT.", colnames(keep4))
+  keep5 = as.data.frame(results(dds, contrast = list("genotypeWT_tax4_mutant_p678.treatmenttreated", "genotypeWT.treatmenttreated")))
+  colnames(keep5) = paste0("tax4_mutant_p678_vs_WT.", colnames(keep5))
+  
+  keeps = data.frame(cpm, keep1[,c(2,5)], keep2[, c(2, 5)], keep3[, c(2,5)], keep4[, c(2,5)], keep5[, c(2,5)], stringsAsFactors = FALSE)
+  
+  keeps = keeps[order(-keeps$tax4_mutant_ks28_vs_WT.log2FoldChange), ]
+  
+  return(keeps)
+  
+}
+
 ######################################
 ######################################
 ## Section (additional) : 
