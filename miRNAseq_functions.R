@@ -96,16 +96,16 @@ compare.readCounts.umiFr.umiNum =function(design, aa, spikes){
          cex = 0.4
          )
     points(spikes[, c(grep(paste0("Total.spikeIn.", id), colnames(spikes)), 
-                      grep(paste0("Total.UMI.spikeIn.", id), colnames(spikes)))], col = 'darkblue', cex = 1.5, pch=16)
+                      grep(paste0("Total.UMI.spikeIn.", id), colnames(spikes)))], col = 'darkblue', cex = 1., pch=16)
     abline(0, 1, lwd=1.2, col = 'red')
     
     plot(aa[, intersect(grep(id, colnames(aa)), grep("Total.count", colnames(aa)))], 
          aa[, intersect(grep(id, colnames(aa)), grep("Total.UMInum.count", colnames(aa)))], 
-         log='xy', main= paste0(design[n, ], collapse = "_"), xlab = 'read counts', ylab =' umi.frations',
+         log='xy', main= paste0(design[n, ], collapse = "_"), xlab = 'read counts', ylab =' umi.counts',
          cex = 0.4
     )
     points(spikes[, c(grep(paste0("Total.spikeIn.", id), colnames(spikes)), 
-                      grep(paste0("Total.UMI.spikeIn.", id), colnames(spikes)))], col = 'darkblue', cex = 1.5, pch=16)
+                      grep(paste0("Total.UMI.spikeIn.", id), colnames(spikes)))], col = 'darkblue', cex = 1., pch=16)
     abline(0, 1, lwd=1.2, col = 'red')
     
   }
