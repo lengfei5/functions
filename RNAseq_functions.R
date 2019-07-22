@@ -30,7 +30,19 @@ cat.countTable = function(xlist, countsfrom = 'featureCounts')
   
 }
 
-process.countTable = function(all, design, special.column = NULL, ensToGeneSymbol = FALSE, mergeCounts.forSameGeneSysbols = TRUE)
+merge.countTables.htseq = function(file_list){
+  
+  tables <- lapply(file_list, function(f) {
+    tmp <- read.delim(f)
+    colnames(tmp) = c('gene', basename(f))
+    return(tmp)
+  })
+  xx <- Reduce(function(dtf1, dtf2) merge(dtf1, dtf2, by = "gene", all = TRUE), tables)
+  return(xx)
+}
+
+
+process.countTable = function(all, design, special.column = NULL, ensToGeneSymbol = TRUE, mergeCounts.forSameGeneSysbols = TRUE)
 {
   index = c()
   for(n in 1:nrow(design))
@@ -69,5 +81,31 @@ process.countTable = function(all, design, special.column = NULL, ensToGeneSymbo
   }
   
   return(newall)
+}
+
+compare.readCount.UMI =function(design, aa){
+  
+  for(n in 1:nrow(design)){
+    id = design$SampleID[n]
+    #par(mfrow=c(1,2))
+    plot(aa[, intersect(grep(id, colnames(aa)), grep(".readCount", colnames(aa)))], 
+         aa[, intersect(grep(id, colnames(aa)), grep(".UMI", colnames(aa)))], 
+         log='xy', main= paste0(design[n, ], collapse = "_"), xlab = 'read counts', ylab =' umi.counts',
+         cex = 0.4
+    )
+    #points(spikes[, c(grep(paste0("Total.spikeIn.", id), colnames(spikes)), 
+    #                  grep(paste0("Total.UMI.spikeIn.", id), colnames(spikes)))], col = 'darkblue', cex = 1., pch=16)
+    abline(0, 1, lwd=1.2, col = 'red')
+    
+    #plot(aa[, intersect(grep(id, colnames(aa)), grep("Total.count", colnames(aa)))], 
+    #     aa[, intersect(grep(id, colnames(aa)), grep("Total.UMInum.count", colnames(aa)))], 
+    #     log='xy', main= paste0(design[n, ], collapse = "_"), xlab = 'read counts', ylab =' umi.counts',
+    #     cex = 0.4
+    #)
+    # points(spikes[, c(grep(paste0("Total.spikeIn.", id), colnames(spikes)), 
+    #                   grep(paste0("Total.UMI.spikeIn.", id), colnames(spikes)))], col = 'darkblue', cex = 1., pch=16)
+    # abline(0, 1, lwd=1.2, col = 'red')
+  }
+  
 }
 
