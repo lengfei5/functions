@@ -107,38 +107,47 @@ compare.readCount.UMI =function(design, aa, normalized = FALSE){
       # abline(0, 1, lwd=1.2, col = 'red')
     }
   }else{
-    xx = aa[, grep(".readCount", colnames(aa))]
-    dds = DESeqDataSetFromMatrix(xx, DataFrame(factor(rep('A', ncol(xx)))), design = ~ 1)
-    jj = rowSums(counts(dds)) >= 20;
+    xx = process.countTable(all=aa, design = design, special.column = ".UMI")
+    gene.filtered = which(!is.na(xx$gene))
+    xx = xx[gene.filtered, ]
+    raw = ceiling(as.matrix(xx[, -1]))
+    raw[which(is.na(raw))] = 0
+    rownames(raw) = xx$gene
+    dds = DESeqDataSetFromMatrix(raw, DataFrame(factor(rep('A', ncol(raw)))), design = ~ 1)
+    gene.filtered2 = rowSums(counts(dds)) >= 10;
     
-    dds <- dds[jj, ]
+    dds <- dds[gene.filtered2, ]
     dds <- estimateSizeFactors(dds)
-    xx = fpm(dds, robust = TRUE)
+    umi = fpm(dds, robust = TRUE)
     
-    yy = aa[, grep(".UMI", colnames(aa))]
-    dds = DESeqDataSetFromMatrix(yy, DataFrame(factor(rep('A', ncol(xx)))), design = ~ 1)
-    dds <- dds[jj, ]
+    yy = process.countTable(all=aa, design = design, special.column = ".readCount")
+    yy = yy[gene.filtered, ]
+    raw = ceiling(as.matrix(yy[, -1]))
+    raw[which(is.na(raw))] = 0
+    rownames(raw) = yy$gene
+    dds = DESeqDataSetFromMatrix(raw, DataFrame(factor(rep('A', ncol(raw)))), design = ~ 1)
+    dds = dds[match(rownames(umi), rownames(dds)), ]
+
     dds <- estimateSizeFactors(dds)
-    yy = fpm(dds, robust = TRUE)
+    reads = fpm(dds, robust = TRUE)
     
-    plot(apply(xx, 1, sd), apply(yy, 1, sd), log='xy');
-    abline(0, 1, lwd=1.0, col='red')
+    conds = paste0(design$stage, "_", design$condition)
     
-    bb = data.frame(xx, yy)
-    
-    for(n in 1:nrow(design)){
-      id = design$SampleID[n]
+    for(cc in unique(conds)){
+      cat(cc, "\n")
+      jj = which(conds == cc)
+      plot.pair.comparison.plot(umi[, jj], main = paste0(cc, " - umi"))
+      plot.pair.comparison.plot(reads[, jj], main = paste0(cc, " - read"))
       
-      plot(bb[, intersect(grep(id, colnames(bb)), grep(".readCount", colnames(bb)))], 
-           bb[, intersect(grep(id, colnames(bb)), grep(".UMI", colnames(bb)))], 
-           log='xy', main= paste0(design[n, ], collapse = "_"), xlab = 'read counts', ylab =' umi.counts',
-           cex = 0.4
-      )
+      vars.umi = apply(log2(umi[, jj]), 1, var)
+      vars.read = apply(log2(reads[, jj]), 1, var)
       
-      abline(0, 1, lwd=1.2, col = 'red')
+      plot(vars.umi, vars.read, log='xy', cex= 0.4);
+      abline(0, 1, lwd=1.0, col='red')
       
+      # plot(apply(log2(umi[, jj]), 1, mean), vars.umi/vars.read, log='y')
     }
-  
+    
   }
 }
 
