@@ -82,7 +82,7 @@ Check.RNAseq.Quality = function(read.count, design.matrix, norms = NULL, lowlyEx
   ### count transformation using vsd
   library("dplyr")
   library("ggplot2")
-  dds <- estimateSizeFactors(dds)
+  # dds <- estimateSizeFactors(dds)
   df <- bind_rows(
     as_data_frame(log2(counts(dds, normalized=TRUE)[, 1:2]+1)) %>%
       mutate(transformation = "log2(x + 1)"),

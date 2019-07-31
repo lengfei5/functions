@@ -83,29 +83,62 @@ process.countTable = function(all, design, special.column = NULL, ensToGeneSymbo
   return(newall)
 }
 
-compare.readCount.UMI =function(design, aa){
-  
-  for(n in 1:nrow(design)){
-    id = design$SampleID[n]
-    #par(mfrow=c(1,2))
-    plot(aa[, intersect(grep(id, colnames(aa)), grep(".readCount", colnames(aa)))], 
-         aa[, intersect(grep(id, colnames(aa)), grep(".UMI", colnames(aa)))], 
-         log='xy', main= paste0(design[n, ], collapse = "_"), xlab = 'read counts', ylab =' umi.counts',
-         cex = 0.4
-    )
-    #points(spikes[, c(grep(paste0("Total.spikeIn.", id), colnames(spikes)), 
-    #                  grep(paste0("Total.UMI.spikeIn.", id), colnames(spikes)))], col = 'darkblue', cex = 1., pch=16)
-    abline(0, 1, lwd=1.2, col = 'red')
+compare.readCount.UMI =function(design, aa, normalized = FALSE){
+  if(!normalized){
+    for(n in 1:nrow(design)){
+      id = design$SampleID[n]
+      #par(mfrow=c(1,2))
+      plot(aa[, intersect(grep(id, colnames(aa)), grep(".readCount", colnames(aa)))], 
+           aa[, intersect(grep(id, colnames(aa)), grep(".UMI", colnames(aa)))], 
+           log='xy', main= paste0(design[n, ], collapse = "_"), xlab = 'read counts', ylab =' umi.counts',
+           cex = 0.4
+      )
+      #points(spikes[, c(grep(paste0("Total.spikeIn.", id), colnames(spikes)), 
+      #                  grep(paste0("Total.UMI.spikeIn.", id), colnames(spikes)))], col = 'darkblue', cex = 1., pch=16)
+      abline(0, 1, lwd=1.2, col = 'red')
+      
+      #plot(aa[, intersect(grep(id, colnames(aa)), grep("Total.count", colnames(aa)))], 
+      #     aa[, intersect(grep(id, colnames(aa)), grep("Total.UMInum.count", colnames(aa)))], 
+      #     log='xy', main= paste0(design[n, ], collapse = "_"), xlab = 'read counts', ylab =' umi.counts',
+      #     cex = 0.4
+      #)
+      # points(spikes[, c(grep(paste0("Total.spikeIn.", id), colnames(spikes)), 
+      #                   grep(paste0("Total.UMI.spikeIn.", id), colnames(spikes)))], col = 'darkblue', cex = 1., pch=16)
+      # abline(0, 1, lwd=1.2, col = 'red')
+    }
+  }else{
+    xx = aa[, grep(".readCount", colnames(aa))]
+    dds = DESeqDataSetFromMatrix(xx, DataFrame(factor(rep('A', ncol(xx)))), design = ~ 1)
+    jj = rowSums(counts(dds)) >= 20;
     
-    #plot(aa[, intersect(grep(id, colnames(aa)), grep("Total.count", colnames(aa)))], 
-    #     aa[, intersect(grep(id, colnames(aa)), grep("Total.UMInum.count", colnames(aa)))], 
-    #     log='xy', main= paste0(design[n, ], collapse = "_"), xlab = 'read counts', ylab =' umi.counts',
-    #     cex = 0.4
-    #)
-    # points(spikes[, c(grep(paste0("Total.spikeIn.", id), colnames(spikes)), 
-    #                   grep(paste0("Total.UMI.spikeIn.", id), colnames(spikes)))], col = 'darkblue', cex = 1., pch=16)
-    # abline(0, 1, lwd=1.2, col = 'red')
-  }
+    dds <- dds[jj, ]
+    dds <- estimateSizeFactors(dds)
+    xx = fpm(dds, robust = TRUE)
+    
+    yy = aa[, grep(".UMI", colnames(aa))]
+    dds = DESeqDataSetFromMatrix(yy, DataFrame(factor(rep('A', ncol(xx)))), design = ~ 1)
+    dds <- dds[jj, ]
+    dds <- estimateSizeFactors(dds)
+    yy = fpm(dds, robust = TRUE)
+    
+    plot(apply(xx, 1, sd), apply(yy, 1, sd), log='xy');
+    abline(0, 1, lwd=1.0, col='red')
+    
+    bb = data.frame(xx, yy)
+    
+    for(n in 1:nrow(design)){
+      id = design$SampleID[n]
+      
+      plot(bb[, intersect(grep(id, colnames(bb)), grep(".readCount", colnames(bb)))], 
+           bb[, intersect(grep(id, colnames(bb)), grep(".UMI", colnames(bb)))], 
+           log='xy', main= paste0(design[n, ], collapse = "_"), xlab = 'read counts', ylab =' umi.counts',
+           cex = 0.4
+      )
+      
+      abline(0, 1, lwd=1.2, col = 'red')
+      
+    }
   
+  }
 }
 
