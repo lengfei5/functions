@@ -26,6 +26,7 @@ cat.countTable = function(xlist, countsfrom = 'featureCounts')
   
   colnames(counts)[1] = 'gene'
   colnames(counts)[-1] = basename(xlist)
+  
   return(counts)
   
 }
