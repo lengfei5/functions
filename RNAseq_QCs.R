@@ -61,8 +61,9 @@ Check.RNAseq.Quality = function(read.count, design.matrix, norms = NULL, lowlyEx
   par(cex = 1.0, las = 1, mgp = c(2,0.2,0), mar = c(20,3,2,0.2), tcl = -0.3)
   for(n in 1:ncol(xx)){
     kk = which(xx[,n]>0);
-    if(n==1) boxplot(log2(xx[kk, n]), horizontal = FALSE, las=2, at=(n), ylim=c(-6, 23), xlim=c(0, (ncol(xx)+1)), names=as.character(colnames(xx)[n]),
-                     las=1, width=0.6, ylab='log2(fpm)', col=cols[n], main="Distribution of normalized signals (cpm)")
+    if(n==1) boxplot(log2(xx[kk, n]), horizontal = FALSE, las=2, at=(n), ylim=c(-6, 23), xlim=c(0, (ncol(xx)+1)), 
+                     names=as.character(colnames(xx)[n]),
+                      width=0.6, ylab='log2(fpm)', col=cols[n], main="Distribution of normalized signals (cpm)")
     else boxplot(log2(xx[kk, n]), horizontal = FALSE, las=1, add=TRUE, at=(n), names=colnames(xx)[n], width=0.6, col=cols[n])
     mtext(colnames(xx)[n], side = 1, at=n, las=2)
   }

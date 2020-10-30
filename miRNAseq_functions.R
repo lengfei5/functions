@@ -95,8 +95,9 @@ compare.readCounts.umiFr.umiNum =function(design, aa, spikes){
          log='xy', main= paste0(design[n, ], collapse = "_"), xlab = 'read counts', ylab =' umi.frations',
          cex = 0.4
          )
-    points(spikes[, c(grep(paste0("Total.spikeIn.", id), colnames(spikes)), 
-                      grep(paste0("Total.UMI.spikeIn.", id), colnames(spikes)))], col = 'darkblue', cex = 1., pch=16)
+    points(spikes[, c(intersect(grep("Total.spikeIn.", colnames(spikes)), grep(id, colnames(spikes))), 
+                      intersect(grep("Total.UMI.spikeIn", colnames(spikes)), grep(id, colnames(spikes))))],
+                      col = 'darkblue', cex = 1., pch=16)
     abline(0, 1, lwd=1.2, col = 'red')
     
     plot(aa[, intersect(grep(id, colnames(aa)), grep("Total.count", colnames(aa)))], 
@@ -104,8 +105,9 @@ compare.readCounts.umiFr.umiNum =function(design, aa, spikes){
          log='xy', main= paste0(design[n, ], collapse = "_"), xlab = 'read counts', ylab =' umi.counts',
          cex = 0.4
     )
-    points(spikes[, c(grep(paste0("Total.spikeIn.", id), colnames(spikes)), 
-                      grep(paste0("Total.UMI.spikeIn.", id), colnames(spikes)))], col = 'darkblue', cex = 1., pch=16)
+    points(spikes[, c(intersect(grep("Total.spikeIn.", colnames(spikes)), grep(id, colnames(spikes))), 
+                      intersect(grep("Total.UMI.spikeIn", colnames(spikes)), grep(id, colnames(spikes))))],
+           col = 'darkblue', cex = 1., pch=16)
     abline(0, 1, lwd=1.2, col = 'red')
     
   }
