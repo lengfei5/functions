@@ -127,14 +127,21 @@ Check.RNAseq.Quality = function(read.count, design.matrix, norms = NULL, lowlyEx
   RPlot.PCA.for.Samples = TRUE
   if(RPlot.PCA.for.Samples){
     pca2save = as.data.frame(plotPCA(vsd, intgroup = colnames(design.matrix)[-1], returnData = TRUE))
-        
-    ggp = eval(parse(text = paste0("ggplot(data=pca2save, aes(PC1, PC2, color=", colnames(design.matrix)[2], 
-                                   ", shape=", colnames(design.matrix)[3], "))" ))) + geom_point(size=3)
-    plot(ggp)
-    ggp = eval(parse(text = paste0("ggplot(data=pca2save, aes(PC1, PC2, label = name, color=", colnames(design.matrix)[2], 
-                                   ", shape=", colnames(design.matrix)[3], "))" ))) + geom_point(size=3) + 
-      geom_text(hjust = 0.7, nudge_y = 1, size=2.5)
-    plot(ggp);
+    library("glmpca")
+    if(ncol(design.matrix) == 2){
+      ggp = eval(parse(text = paste0("ggplot(data=pca2save, aes(PC1, PC2, color=", colnames(design.matrix)[2], 
+                                     ", shape=", colnames(design.matrix)[3], "))" ))) + geom_point(size=3)
+      plot(ggp)
+      
+    }    
+    
+    if(ncol(design.matrix) == 3){
+      ggp = eval(parse(text = paste0("ggplot(data=pca2save, aes(PC1, PC2, label = name, color=", colnames(design.matrix)[2], 
+                                     ", shape=", colnames(design.matrix)[3], "))" ))) + geom_point(size=3) + 
+        geom_text(hjust = 0.7, nudge_y = 1, size=2.5)
+      plot(ggp);
+      
+    }
     
     #ggp = ggplot(data=pca2save, aes(PC1, PC2, label = name, color=condition, shape=time)) + geom_point(size=3) +
     #  geom_text(hjust = 0.7, nudge_y = 1, size=2.5)  
@@ -177,7 +184,7 @@ panel.cor <- function(x, y, digits=2, prefix="", cex.cor)
   text(.8, .8, Signif, cex=cex, col=2) 
 }
 
-panel.fitting = function (x, y, bg = NA, pch = par("pch"), cex = 1.0, col='black') 
+panel.fitting = function (x, y, bg = NA, pch = par("pch"), cex = 0.25, col='black') 
 {
   #x = yy[,1];y=yy[,2];
   #kk = which(x>0 & y>0); x=x[kk];y=y[kk]

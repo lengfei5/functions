@@ -85,10 +85,14 @@ merge.countTables.htseq = function(file_list){
 }
 
 
-process.countTable = function(all, design, special.column = NULL, ensToGeneSymbol = FALSE, mergeCounts.forSameGeneSysbols = TRUE)
+process.countTable = function(all, design, special.column = NULL, ensToGeneSymbol = FALSE, mergeCounts.forSameGeneSysbols = TRUE, 
+                              merge.technicalRep.sameID = TRUE)
 {
+  newall = data.frame(as.character(all[, 1]),  matrix(NA, nrow = nrow(all), ncol = nrow(design)), stringsAsFactors = FALSE)
+  
   index = c()
   index.design.with.found.sample = c()
+  
   for(n in 1:nrow(design))
   {
     #n = 1;
@@ -98,12 +102,21 @@ process.countTable = function(all, design, special.column = NULL, ensToGeneSymbo
     if(length(jj)==1) {
       index = c(index,jj)
       index.design.with.found.sample = c(index.design.with.found.sample, n)
+      newall[, (n+1)] = all[, jj]
+      
     }else{
-      print(paste0("ERROR for sample--", design$SampleID[n]))
+      if(merge.technicalRep.sameID){
+        cat(length(jj), 'samples found --- ', design$SampleID[n], '\n')
+        index.design.with.found.sample = c(index.design.with.found.sample, n)
+        newall[, (n+1)] = all[, jj] = apply(all[, jj], 1, sum)
+        
+      }else{
+        print(paste0("ERROR for sample--", design$SampleID[n]))
+      }
+      
     }
   }
   
-  newall = data.frame(as.character(all[, 1]),  as.matrix(all[, index]), stringsAsFactors = FALSE)
   colnames(newall)[1] = "gene"
   kk = which(colnames(design)=='SampleID')
   kk = c(setdiff(c(1:ncol(design)), kk), kk)
