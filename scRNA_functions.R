@@ -958,13 +958,34 @@ normalized.counts.using.scran.old = function(sce)
 ########################################################
 find.HVGs = function(sce, Norm.Vars.per.batch = TRUE, method = "scran", ntop = NULL)
 {
+  require(scran)
+  require(scater)
   if(method == "scran"){
     if(!Norm.Vars.per.batch){
       ## here we use batches as blockes, i.e. calculated mean and variances separately for each batches and then fit the trend
       ## In doing so, we implicitly assume that the trend is the same between batches
       ## https://bioconductor.org/packages/3.10/workflows/vignettes/simpleSingleCell/inst/doc/var.html#41_using_the_block=_argument
-      fit <- trendVar(sce, block=sce$batches, parametric=TRUE, assay.type="logcounts", use.spikes=FALSE)
-      dec <- decomposeVar(sce, fit)
+      ## update 20210726 
+      ## following https://bioconductor.org/packages/release/bioc/vignettes/scran/inst/doc/scran.html#3_Variance_modelling
+      dec <- modelGeneVar(sce)
+      dec = modelGeneCV2(sce)
+      plot(dec$mean, dec$total, xlab="Mean log-expression", ylab="Variance", log = 'xy', cex = 0.5)
+      curve(metadata(dec)$trend(x), col="blue", add=TRUE, )
+      
+      # Get the top 10% of genes.
+      top.hvgs <- getTopHVGs(dec, prop=0.1)
+      
+      # Get the top 2000 genes.
+      top.hvgs2 <- getTopHVGs(dec, n=2000)
+      
+      # Get all genes with positive biological components.
+      top.hvgs3 <- getTopHVGs(dec, var.threshold=0)
+      
+      # Get all genes with FDR below 5%.
+      top.hvgs4 <- getTopHVGs(dec, fdr.threshold=0.05)
+      
+      
+      #dec <- decomposeVar(sce, fit)
       
       par(mfrow=c(1,2))
       cols = c(1:length(bc.uniq)) 
