@@ -968,9 +968,10 @@ find.HVGs = function(sce, Norm.Vars.per.batch = TRUE, method = "scran", ntop = N
       ## update 20210726 
       ## following https://bioconductor.org/packages/release/bioc/vignettes/scran/inst/doc/scran.html#3_Variance_modelling
       dec <- modelGeneVar(sce)
-      dec = modelGeneCV2(sce)
-      plot(dec$mean, dec$total, xlab="Mean log-expression", ylab="Variance", log = 'xy', cex = 0.5)
-      curve(metadata(dec)$trend(x), col="blue", add=TRUE, )
+      #dec = modelGeneCV2(sce)
+      
+      plot(dec$mean, dec$total, xlab="Mean log-expression", ylab="Variance", log = '', cex = 0.5)
+      curve(metadata(dec)$trend(x), col="blue", add=TRUE)
       
       # Get the top 10% of genes.
       top.hvgs <- getTopHVGs(dec, prop=0.1)
